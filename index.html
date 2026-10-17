@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Will &amp; Cora</title>
+<meta name="description" content="Save the date for Will & Cora. Say yes, if you can.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap">
+<style>
+/* ============================================================
+   WILL & CORA - "Underfoot"
+   The painting sits on the same white as its own ground, frameless.
+   Below it, Lisbon comes up underfoot as a mosaic: hand-set square
+   tiles coloured from the painting itself - the teal of the river,
+   the greens of the hills, the terracotta of the roof - laid into one
+   complete wave. The RSVP is a path of those same tiles, walked toward
+   the wedding. The painting's own palette is the whole colour system.
+   Committed single world.
+   ============================================================ */
+:root{
+  --bg:#ffffff;            /* the grout-white ground = the painting's own white */
+  --ink:#5a3621;           /* warm sepia, the hand-lettering's own ink - never black */
+  --ink-soft:#786046;      /* muted warm brown - secondary & signature (AA) */
+  --line:#ebe3d7;          /* warm hairline                           */
+  --line-strong:#cfc8bb;   /* ghost-control edge                      */
+  --river:#19615c;         /* deep teal - primary action              */
+  --river-deep:#124a46;
+  --green:#3f6a2f;         /* the hills - "you passed"                */
+  --terra:#9a5a37;         /* the roof - the dead end                 */
+  color-scheme:light;
+  --maxw:560px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --serif:"Spectral", Georgia, "Times New Roman", serif;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:var(--serif);font-size:16px;line-height:1.6;overflow-x:hidden;
+}
+::selection{background:var(--river);color:#fff}
+:focus-visible{outline:2px solid var(--river);outline-offset:3px;border-radius:2px}
+
+.page{
+  max-width:var(--maxw);margin:0 auto;
+  padding-left:max(22px, env(safe-area-inset-left,0px));
+  padding-right:max(22px, env(safe-area-inset-right,0px));
+  padding-top:clamp(10px,4vw,30px);
+  padding-bottom:clamp(34px,9vw,60px);
+}
+
+/* the painting, frameless, fused into the white */
+.art{margin:0}
+.art img{display:block;width:100%}
+
+/* the wave - one complete wave, hand-set in CSS square tiles coloured
+   from the painting; grout is the white page showing through the gaps */
+.mosaic{
+  display:grid;gap:3px;max-width:440px;
+  margin:clamp(30px,7vw,46px) auto;
+}
+.mosaic .t{aspect-ratio:1;border-radius:1.5px}
+.mosaic .t.on{box-shadow:inset 0 1px 0 rgba(255,255,255,.28), inset 0 -1px 2px rgba(0,0,0,.08)}
+
+/* the question - refined, in the painting's warm ink, set in italic serif */
+.q{
+  font-family:var(--serif);font-weight:500;font-style:italic;
+  text-align:center;text-wrap:balance;
+  font-size:clamp(1.55rem,5.8vw,2.15rem);line-height:1.26;
+  letter-spacing:.006em;margin:0 auto .1em;max-width:18ch;color:var(--ink);
+}
+
+/* Yes · No */
+.yesno{position:relative;display:flex;gap:18px;justify-content:center;align-items:center;
+  flex-wrap:wrap;margin-top:clamp(22px,6vw,32px);min-height:62px}
+.btn{
+  font-family:var(--serif);font-weight:500;font-size:1.1rem;letter-spacing:.03em;
+  cursor:pointer;border-radius:4px;-webkit-tap-highlight-color:transparent;
+  transition:transform .18s var(--ease), background .2s var(--ease), color .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease);
+}
+.btn-yes{
+  color:#f6f3ea;background:var(--river);border:none;padding:13px 44px;
+  box-shadow:0 1px 2px rgba(18,74,70,.2), 0 10px 22px -12px rgba(18,74,70,.55);
+}
+.btn-yes:hover{background:var(--river-deep);transform:translateY(-1px)}
+.btn-yes:active{transform:translateY(0)}
+.btn-no{
+  color:var(--ink);background:var(--bg);border:1px solid var(--line-strong);padding:12px 34px;
+  transition:left .22s var(--ease), top .22s var(--ease), transform .2s ease, border-color .2s ease;
+  touch-action:none;
+}
+.btn-no:hover{border-color:var(--ink-soft)}
+.btn-no.loose{position:fixed;z-index:60;margin:0}
+
+/* progress gauge - each tile a different colour from the wave, revealed as you go */
+.path{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;
+  margin:0 auto clamp(20px,5vw,28px)}
+.paver{width:14px;height:14px;border-radius:2px;background:#f1ede4;
+  box-shadow:inset 0 0 0 1px var(--line-strong);transition:transform .25s var(--ease)}
+.paver.laid{box-shadow:inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 2px rgba(0,0,0,.1)}
+.paver.here{box-shadow:inset 0 0 0 1.5px var(--ink);transform:scale(1.16)}
+.paver.just{animation:reveal .45s var(--ease) both}
+@keyframes reveal{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.2)}100%{transform:scale(1);opacity:1}}
+
+/* answers - a clean ruled list (no tiles), each tinted on approach */
+.choices{max-width:430px;margin:0 auto;border-top:1px solid var(--line)}
+.choice{
+  position:relative;display:block;width:100%;text-align:left;
+  font-family:var(--serif);font-weight:400;font-size:1.12rem;line-height:1.4;color:var(--ink);
+  background:none;border:none;border-bottom:1px solid var(--line);
+  padding:16px 8px 16px 6px;cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:color .18s var(--ease), padding-left .18s var(--ease), border-color .18s var(--ease);
+}
+.choice:hover,.choice:focus-visible{color:var(--c,var(--river));padding-left:18px;border-color:var(--c,var(--river))}
+
+/* the arrival */
+.verdict{text-align:center}
+.verdict-title{
+  font-family:var(--serif);font-weight:500;font-style:italic;line-height:1.08;letter-spacing:.006em;
+  font-size:clamp(2rem,9vw,2.8rem);margin:0;color:var(--ink);
+}
+.verdict-title.pass{color:var(--green)}
+.verdict-title.fail{color:var(--terra)}
+.verdict-sub{font-family:var(--serif);font-style:italic;font-weight:400;
+  max-width:32ch;margin:.55em auto 0;color:var(--ink-soft);font-size:1.05rem;line-height:1.5}
+.again{
+  display:block;width:max-content;margin:clamp(22px,6vw,30px) auto 0;
+  font-family:var(--serif);font-weight:600;font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.24em;color:var(--river);background:none;border:none;cursor:pointer;
+  padding:0 0 3px;border-bottom:1px solid currentColor;
+}
+.again:hover{color:var(--river-deep)}
+
+.panel{margin-top:clamp(30px,7vw,46px)}
+
+/* signature - truly tiny, a pencil whisper at the foot of the page */
+.sign{margin-top:clamp(48px,12vw,78px);text-align:center}
+.sign p{margin:0;font-family:var(--serif);font-weight:400;
+  font-size:.66rem;line-height:1.6;letter-spacing:.05em;color:var(--ink-soft)}
+.sign .who{font-style:italic}
+
+@media (prefers-reduced-motion:reduce){
+  .btn,.btn-no,.choice,.paver{transition:none}
+  .paver.just{animation:none}
+}
+</style>
+</head>
+<body>
+<main class="page">
+
+  <figure class="art">
+    <img src="save-the-date.jpg" alt="Hand-painted save-the-date for Will and Cora: a view over Lisbon's green hills to the river and the 25 de Abril bridge, with the date 16.07.27.">
+  </figure>
+
+  <div class="mosaic" id="mosaic" aria-hidden="true"></div>
+
+  <!-- the gate -->
+  <section id="gate">
+    <h1 class="q">Want to come to our wedding?</h1>
+    <div class="yesno">
+      <button class="btn btn-yes" id="yes">Yes</button>
+      <button class="btn btn-no" id="no">No</button>
+    </div>
+  </section>
+
+  <!-- the walk -->
+  <section class="panel" id="quiz" hidden></section>
+
+  <!-- the arrival -->
+  <section class="panel verdict" id="result" hidden></section>
+
+  <footer class="sign">
+    <p>with love, <span class="who">by the first person they met in Lisbon</span></p>
+  </footer>
+
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  /* the painting's palette - the whole colour system */
+  var PAL=["#19615c","#2f8a79","#56aa91","#4a9540","#639a5e","#416930","#9c8a3e","#af7447"];
+  var CHIP=["#19615c","#4a9540","#9c8a3e","#af7447"];  // answer hover tint
+  var GAUGE=["#19615c","#4a9540","#af7447"]; // one distinct wave colour per step (teal → green → terracotta)
+
+  /* one complete wave, hand-set in CSS square tiles coloured from the painting */
+  (function buildMosaic(){
+    var el=document.getElementById("mosaic"); if(!el) return;
+    var COLS=25, ROWS=9, mid=4, amp=2.7, half=1.3;   // one full sine period, fully contained
+    el.style.gridTemplateColumns="repeat("+COLS+",1fr)";
+    var frag=document.createDocumentFragment();
+    for(var r=0;r<ROWS;r++){
+      for(var c=0;c<COLS;c++){
+        var d=document.createElement("div"); d.className="t";
+        var center=mid+amp*Math.sin((c/(COLS-1))*Math.PI*2);
+        var dist=Math.abs(r-center);
+        if(dist<=half+0.5){
+          var idx=Math.floor((c/COLS)*PAL.length + dist*0.9);
+          d.className="t on";
+          d.style.background=PAL[((idx%PAL.length)+PAL.length)%PAL.length];
+        }
+        frag.appendChild(d);
+      }
+    }
+    el.appendChild(frag);
+  })();
+
+  /* the loose "No" that can never be clicked - mouse and touch */
+  var no=document.getElementById("no"), yes=document.getElementById("yes");
+  function flee(e){
+    if(e) e.preventDefault();
+    if(!no.classList.contains("loose")) no.classList.add("loose");
+    var vw=innerWidth,vh=innerHeight,bw=no.offsetWidth||96,bh=no.offsetHeight||46,pad=10;
+    var yr=yes.getBoundingClientRect(),x,y,t=0;
+    do{ x=pad+Math.random()*(vw-bw-pad*2); y=pad+Math.random()*(vh-bh-pad*2); t++; }
+    while(t<24 && x<yr.right+24 && x+bw>yr.left-24 && y<yr.bottom+24 && y+bh>yr.top-24);
+    no.style.left=x+"px"; no.style.top=y+"px";
+    no.style.transform="rotate("+(Math.random()*14-7).toFixed(1)+"deg)";
+  }
+  no.addEventListener("mouseenter",flee);
+  no.addEventListener("mousedown",flee);
+  no.addEventListener("focus",flee);
+  no.addEventListener("touchstart",flee,{passive:false});
+  no.addEventListener("click",function(e){e.preventDefault();flee();});
+  function near(px,py){
+    var r=no.getBoundingClientRect();
+    if(!no.classList.contains("loose")){
+      if(px>r.left-42&&px<r.right+42&&py>r.top-42&&py<r.bottom+42) flee();
+      return;
+    }
+    var cx=r.left+r.width/2, cy=r.top+r.height/2;
+    if(Math.hypot(px-cx,py-cy)<92) flee();
+  }
+  document.addEventListener("mousemove",function(e){near(e.clientX,e.clientY);});
+  document.addEventListener("touchmove",function(e){var t=e.touches[0];if(t)near(t.clientX,t.clientY);},{passive:true});
+
+  /* the quiz */
+  var Q=[
+    {q:"Who’s going to be the most tanned at the wedding?",
+     a:["Cora","Will","Me"],
+     correct:"Cora", fail:"Wrong! Only Cora gets that golden glow. Try again?"},
+    {q:"Who can drink the most beers, Cora or Will?",
+     a:["Cora","Will","We’ll have to see at the wedding"],
+     correct:null},
+    {q:"How much do you love Will & Cora?",
+     a:["Un peu","Beaucoup","À la folie","Pas du tout"],
+     correct:"À la folie", fail:"Go practise your French, then try again?"}
+  ];
+  var quiz=document.getElementById("quiz"), result=document.getElementById("result"), gate=document.getElementById("gate");
+  var step=0, failMsg="";
+
+  yes.addEventListener("click",function(){
+    gate.hidden=true; step=0; failMsg=""; render(); scrollTo(quiz);
+  });
+
+  function pathHTML(){
+    var s='<div class="path" role="img" aria-label="Question '+(step+1)+' of '+Q.length+'">';
+    for(var i=0;i<Q.length;i++){
+      var laid=i<step;
+      var cls='paver'+(laid?' laid':'')+(i===step?' here':'')+(i===step-1?' just':'');
+      var st=laid?' style="background:'+GAUGE[i%GAUGE.length]+'"':'';
+      s+='<span class="'+cls+'"'+st+'></span>';
+    }
+    return s+'</div>';
+  }
+  function render(){
+    var it=Q[step], h=pathHTML();
+    h+='<h2 class="q">'+it.q+'</h2><div class="choices">';
+    it.a.forEach(function(opt,i){
+      h+='<button class="choice" style="--c:'+CHIP[i%CHIP.length]+'">'+opt+'</button>';
+    });
+    h+='</div>';
+    quiz.innerHTML=h; quiz.hidden=false;
+    Array.prototype.forEach.call(quiz.querySelectorAll(".choice"),function(btn,i){
+      btn.addEventListener("click",function(){
+        if(it.correct && it.a[i]!==it.correct && !failMsg){ failMsg=it.fail; }
+        step++;
+        if(step<Q.length){ render(); scrollTo(quiz); } else showResult();
+      });
+    });
+  }
+  function showResult(){
+    quiz.hidden=true;
+    var passed=!failMsg, h='';
+    if(passed){
+      h+='<h2 class="verdict-title pass">You passed!</h2>';
+      h+='<p class="verdict-sub">You’re officially invited. Start packing for Lisbon. See you on 16.07.27.</p>';
+      h+='<button class="again" id="again">take it again</button>';
+    }else{
+      h+='<h2 class="verdict-title fail">You’re uninvited!</h2>';
+      h+='<p class="verdict-sub">'+failMsg+'</p>';
+      h+='<button class="again" id="again">redeem yourself</button>';
+    }
+    result.innerHTML=h; result.hidden=false; scrollTo(result);
+    document.getElementById("again").addEventListener("click",function(){
+      result.hidden=true; step=0; failMsg=""; render(); scrollTo(quiz);
+    });
+  }
+  function scrollTo(el){ try{ el.scrollIntoView({behavior:reduce?"auto":"smooth",block:"center"}); }catch(e){} }
+})();
+</script>
+</body>
+</html>
