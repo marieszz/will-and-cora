@@ -87,13 +87,22 @@ body{
 }
 .btn-yes:hover{background:var(--river-deep);transform:translateY(-1px)}
 .btn-yes:active{transform:translateY(0)}
+/* "No" lives at the page root and drifts on its own from the moment the
+   question appears. pointer-events:none means clicks pass straight through,
+   so it can never be chosen. It starts invisible and fades in with a drift. */
 .btn-no{
   color:var(--ink);background:var(--bg);border:1px solid var(--line-strong);padding:12px 34px;
-  transition:left .22s var(--ease), top .22s var(--ease), transform .2s ease, border-color .2s ease;
-  touch-action:none;
+  touch-action:none;position:fixed;top:0;left:0;z-index:60;margin:0;
+  pointer-events:none;opacity:0;
+  transition:left 1.3s var(--ease), top 1.3s var(--ease), transform 1.3s var(--ease), opacity .7s var(--ease);
 }
-.btn-no:hover{border-color:var(--ink-soft)}
-.btn-no.loose{position:fixed;z-index:60;margin:0}
+.btn-no.show{opacity:1}
+.btn-no.dodge{transition:left .3s var(--ease), top .3s var(--ease), transform .3s var(--ease), opacity .7s var(--ease)}
+
+/* the quiet aside under the (now single) option */
+.oneopt{font-family:var(--serif);font-style:italic;font-weight:400;text-align:center;
+  color:var(--ink-soft);font-size:.92rem;line-height:1.5;letter-spacing:.01em;
+  margin:14px auto 0;max-width:30ch}
 
 /* progress gauge - each tile a different colour from the wave, revealed as you go */
 .path{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;
@@ -153,12 +162,14 @@ body{
   100%{opacity:1;transform:scale(1)}
 }
 
-/* the question arrives, then the Yes / No - in sequence */
+/* the question arrives, then the option, then the aside - in sequence */
 #gate[data-reveal] .q{opacity:0;transform:translateY(16px);
   transition:opacity .6s var(--ease), transform .6s var(--ease)}
 #gate[data-reveal] .yesno{opacity:0;transform:translateY(16px);
   transition:opacity .6s var(--ease) .22s, transform .6s var(--ease) .22s}
-#gate[data-reveal].in .q,#gate[data-reveal].in .yesno{opacity:1;transform:none}
+#gate[data-reveal] .oneopt{opacity:0;transform:translateY(16px);
+  transition:opacity .6s var(--ease) .4s, transform .6s var(--ease) .4s}
+#gate[data-reveal].in .q,#gate[data-reveal].in .yesno,#gate[data-reveal].in .oneopt{opacity:1;transform:none}
 
 /* a quiet cue that there is more below the painting */
 .scrollcue{
@@ -187,7 +198,8 @@ body{
   .art[data-reveal]{opacity:1;transform:none;transition:none}
   .mosaic .t.on{opacity:1}
   .mosaic.in .t.on{animation:none}
-  #gate[data-reveal] .q,#gate[data-reveal] .yesno{opacity:1;transform:none;transition:none}
+  #gate[data-reveal] .q,#gate[data-reveal] .yesno,#gate[data-reveal] .oneopt{opacity:1;transform:none;transition:none}
+  .btn-no{display:none}            /* no motion: drop the dodging option entirely */
   .scrollcue svg{animation:none}
   .stepIn{animation:none}
 }
@@ -207,8 +219,8 @@ body{
     <h1 class="q">Want to come to our wedding?</h1>
     <div class="yesno">
       <button class="btn btn-yes" id="yes">Yes</button>
-      <button class="btn btn-no" id="no">No</button>
     </div>
+    <p class="oneopt">(looks like you have only one option!)</p>
   </section>
 
   <!-- the walk -->
@@ -222,6 +234,9 @@ body{
   </footer>
 
 </main>
+
+<!-- the option that keeps running away -->
+<button class="btn btn-no" id="no" aria-hidden="true" tabindex="-1">No</button>
 
 <div class="scrollcue" id="scrollcue" aria-hidden="true">
   <span>scroll</span>
@@ -297,34 +312,48 @@ body{
     el.appendChild(frag);
   })();
 
-  /* the loose "No" that can never be clicked - mouse and touch */
-  var no=document.getElementById("no"), yes=document.getElementById("yes");
-  function flee(e){
-    if(e) e.preventDefault();
-    if(!no.classList.contains("loose")) no.classList.add("loose");
-    var vw=innerWidth,vh=innerHeight,bw=no.offsetWidth||96,bh=no.offsetHeight||46,pad=10;
-    var yr=yes.getBoundingClientRect(),x,y,t=0;
-    do{ x=pad+Math.random()*(vw-bw-pad*2); y=pad+Math.random()*(vh-bh-pad*2); t++; }
-    while(t<24 && x<yr.right+24 && x+bw>yr.left-24 && y<yr.bottom+24 && y+bh>yr.top-24);
-    no.style.left=x+"px"; no.style.top=y+"px";
-    no.style.transform="rotate("+(Math.random()*14-7).toFixed(1)+"deg)";
-  }
-  no.addEventListener("mouseenter",flee);
-  no.addEventListener("mousedown",flee);
-  no.addEventListener("focus",flee);
-  no.addEventListener("touchstart",flee,{passive:false});
-  no.addEventListener("click",function(e){e.preventDefault();flee();});
-  function near(px,py){
-    var r=no.getBoundingClientRect();
-    if(!no.classList.contains("loose")){
-      if(px>r.left-42&&px<r.right+42&&py>r.top-42&&py<r.bottom+42) flee();
-      return;
+  /* the "No" that drifts on its own - never clickable.
+     It is pointer-events:none, so clicks pass straight through it.
+     It wakes up the moment the question scrolls into view and then
+     keeps wandering forever, darting away faster if a cursor nears. */
+  var no=document.getElementById("no"), yes=document.getElementById("yes"), gate=document.getElementById("gate");
+  var noTimer=null;
+  function stopNo(){ if(noTimer){ clearInterval(noTimer); noTimer=null; } if(no) no.classList.remove("show"); }
+  if(!reduce && no){
+    var started=false, lastMove=0;
+    function driftTo(fast){
+      no.classList.toggle("dodge", !!fast);
+      var vw=innerWidth, vh=innerHeight, bw=no.offsetWidth||80, bh=no.offsetHeight||46, pad=14;
+      var yr=yes.getBoundingClientRect(), x, y, t=0;
+      do{ x=pad+Math.random()*(vw-bw-pad*2); y=pad+Math.random()*(vh-bh-pad*2); t++; }
+      while(t<24 && x<yr.right+30 && x+bw>yr.left-30 && y<yr.bottom+30 && y+bh>yr.top-30);
+      no.style.left=x+"px"; no.style.top=y+"px";
+      no.style.transform="rotate("+(Math.random()*16-8).toFixed(1)+"deg)";
+      lastMove=Date.now();
     }
-    var cx=r.left+r.width/2, cy=r.top+r.height/2;
-    if(Math.hypot(px-cx,py-cy)<92) flee();
+    function start(){
+      if(started) return; started=true;
+      no.classList.add("show");
+      driftTo(false);
+      noTimer=setInterval(function(){ driftTo(false); }, 2200);
+    }
+    /* begin as soon as the invitation question comes into view */
+    if("IntersectionObserver" in window){
+      var go=new IntersectionObserver(function(es){
+        es.forEach(function(e){ if(e.isIntersecting){ start(); go.disconnect(); } });
+      },{threshold:0.3});
+      go.observe(gate);
+    }else{ start(); }
+    /* dart away if a cursor or finger comes close */
+    function dodge(px,py){
+      if(!started || Date.now()-lastMove<260) return;   /* don't thrash mid-glide */
+      var r=no.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+      if(Math.hypot(px-cx,py-cy)<96) driftTo(true);
+    }
+    document.addEventListener("mousemove",function(e){ dodge(e.clientX,e.clientY); });
+    document.addEventListener("touchmove",function(e){ var t=e.touches[0]; if(t) dodge(t.clientX,t.clientY); },{passive:true});
+    addEventListener("resize",function(){ if(started) driftTo(false); });
   }
-  document.addEventListener("mousemove",function(e){near(e.clientX,e.clientY);});
-  document.addEventListener("touchmove",function(e){var t=e.touches[0];if(t)near(t.clientX,t.clientY);},{passive:true});
 
   /* the quiz */
   var Q=[
@@ -342,6 +371,7 @@ body{
   var step=0, failMsg="";
 
   yes.addEventListener("click",function(){
+    stopNo();                       /* the walk begins - "No" bows out */
     gate.hidden=true; step=0; failMsg=""; render(); scrollTo(quiz);
   });
 
