@@ -136,6 +136,45 @@ body{
 
 .panel{margin-top:clamp(30px,7vw,46px)}
 
+/* ---- scroll-reveal ------------------------------------------------ */
+
+/* the painting settles gently into place on load */
+.art[data-reveal]{opacity:0;transform:translateY(18px) scale(.99);
+  transition:opacity .8s var(--ease), transform .8s var(--ease)}
+.art[data-reveal].in{opacity:1;transform:none}
+
+/* the wave lays itself, tile by tile, left to right - like a hand
+   setting the mosaic. Delay per tile is set inline (--d). */
+.mosaic .t.on{opacity:0}
+.mosaic.in .t.on{animation:tileLay .5s var(--ease) both;animation-delay:var(--d,0ms)}
+@keyframes tileLay{
+  0%{opacity:0;transform:scale(.2) translateY(7px)}
+  60%{opacity:1;transform:scale(1.14)}
+  100%{opacity:1;transform:scale(1)}
+}
+
+/* the question arrives, then the Yes / No - in sequence */
+#gate[data-reveal] .q{opacity:0;transform:translateY(16px);
+  transition:opacity .6s var(--ease), transform .6s var(--ease)}
+#gate[data-reveal] .yesno{opacity:0;transform:translateY(16px);
+  transition:opacity .6s var(--ease) .22s, transform .6s var(--ease) .22s}
+#gate[data-reveal].in .q,#gate[data-reveal].in .yesno{opacity:1;transform:none}
+
+/* a quiet cue that there is more below the painting */
+.scrollcue{
+  position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:40;
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  font-family:var(--serif);font-size:.6rem;font-weight:600;letter-spacing:.26em;
+  text-transform:uppercase;color:var(--ink-soft);pointer-events:none;
+  transition:opacity .5s var(--ease), transform .5s var(--ease)}
+.scrollcue svg{width:15px;height:15px;display:block;animation:bob 1.7s var(--ease) infinite}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(5px);opacity:1}}
+.scrollcue.hide{opacity:0;transform:translateX(-50%) translateY(10px)}
+
+/* each quiz step / verdict fades up as it is rendered */
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.stepIn{animation:fadeUp .55s var(--ease) both}
+
 /* signature - truly tiny, a pencil whisper at the foot of the page */
 .sign{margin-top:clamp(48px,12vw,78px);text-align:center}
 .sign p{margin:0;font-family:var(--serif);font-weight:400;
@@ -145,20 +184,26 @@ body{
 @media (prefers-reduced-motion:reduce){
   .btn,.btn-no,.choice,.paver{transition:none}
   .paver.just{animation:none}
+  .art[data-reveal]{opacity:1;transform:none;transition:none}
+  .mosaic .t.on{opacity:1}
+  .mosaic.in .t.on{animation:none}
+  #gate[data-reveal] .q,#gate[data-reveal] .yesno{opacity:1;transform:none;transition:none}
+  .scrollcue svg{animation:none}
+  .stepIn{animation:none}
 }
 </style>
 </head>
 <body>
 <main class="page">
 
-  <figure class="art">
+  <figure class="art" data-reveal>
     <img src="save-the-date.jpg" alt="Hand-painted save-the-date for Will and Cora: a view over Lisbon's green hills to the river and the 25 de Abril bridge, with the date 16.07.27.">
   </figure>
 
   <div class="mosaic" id="mosaic" aria-hidden="true"></div>
 
   <!-- the gate -->
-  <section id="gate">
+  <section id="gate" data-reveal>
     <h1 class="q">Want to come to our wedding?</h1>
     <div class="yesno">
       <button class="btn btn-yes" id="yes">Yes</button>
@@ -178,10 +223,50 @@ body{
 
 </main>
 
+<div class="scrollcue" id="scrollcue" aria-hidden="true">
+  <span>scroll</span>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+</div>
+
 <script>
 (function(){
   "use strict";
+  /* always open at the top so the invitation and its scroll cue are seen first */
+  if("scrollRestoration" in history) history.scrollRestoration="manual";
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  /* scroll-reveal: each marked element reveals as it enters the view
+     (the painting fades, the wave lays itself tile by tile, the question
+      and buttons arrive in sequence - all driven by the ".in" class) */
+  (function revealOnScroll(){
+    var els=document.querySelectorAll("[data-reveal], #mosaic");
+    if(reduce || !("IntersectionObserver" in window)){
+      Array.prototype.forEach.call(els,function(el){el.classList.add("in");});
+      return;
+    }
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){ en.target.classList.add("in"); io.unobserve(en.target); }
+      });
+    },{threshold:0.18, rootMargin:"0px 0px -10% 0px"});
+    Array.prototype.forEach.call(els,function(el){ io.observe(el); });
+  })();
+
+  /* the scroll cue - fades away the moment the visitor starts scrolling */
+  (function scrollCue(){
+    var cue=document.getElementById("scrollcue"); if(!cue) return;
+    function hide(){ cue.classList.add("hide"); window.removeEventListener("scroll",onScroll); }
+    function onScroll(){ if(window.pageYOffset>24) hide(); }
+    window.addEventListener("scroll",onScroll,{passive:true});
+    /* if the whole page already fits (nothing to scroll), drop the cue */
+    if(document.documentElement.scrollHeight<=window.innerHeight+8) hide();
+  })();
+
+  /* replay the fade-up each time a quiz step or verdict is rendered */
+  function animIn(el){
+    if(reduce) return;
+    el.classList.remove("stepIn"); void el.offsetWidth; el.classList.add("stepIn");
+  }
 
   /* the painting's palette - the whole colour system */
   var PAL=["#19615c","#2f8a79","#56aa91","#4a9540","#639a5e","#416930","#9c8a3e","#af7447"];
@@ -203,6 +288,8 @@ body{
           var idx=Math.floor((c/COLS)*PAL.length + dist*0.9);
           d.className="t on";
           d.style.background=PAL[((idx%PAL.length)+PAL.length)%PAL.length];
+          /* lay left-to-right, tiles below the crest trailing slightly */
+          d.style.setProperty("--d",(c*24 + dist*28)+"ms");
         }
         frag.appendChild(d);
       }
@@ -275,10 +362,11 @@ body{
       h+='<button class="choice" style="--c:'+CHIP[i%CHIP.length]+'">'+opt+'</button>';
     });
     h+='</div>';
-    quiz.innerHTML=h; quiz.hidden=false;
+    quiz.innerHTML=h; quiz.hidden=false; animIn(quiz);
     Array.prototype.forEach.call(quiz.querySelectorAll(".choice"),function(btn,i){
       btn.addEventListener("click",function(){
-        if(it.correct && it.a[i]!==it.correct && !failMsg){ failMsg=it.fail; }
+        /* a wrong answer ends the walk at once - no further questions */
+        if(it.correct && it.a[i]!==it.correct){ failMsg=it.fail; showResult(); return; }
         step++;
         if(step<Q.length){ render(); scrollTo(quiz); } else showResult();
       });
@@ -296,7 +384,7 @@ body{
       h+='<p class="verdict-sub">'+failMsg+'</p>';
       h+='<button class="again" id="again">redeem yourself</button>';
     }
-    result.innerHTML=h; result.hidden=false; scrollTo(result);
+    result.innerHTML=h; result.hidden=false; animIn(result); scrollTo(result);
     document.getElementById("again").addEventListener("click",function(){
       result.hidden=true; step=0; failMsg=""; render(); scrollTo(quiz);
     });
