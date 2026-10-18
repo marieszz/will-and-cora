@@ -87,22 +87,22 @@ body{
 }
 .btn-yes:hover{background:var(--river-deep);transform:translateY(-1px)}
 .btn-yes:active{transform:translateY(0)}
-/* "No" lives at the page root and drifts on its own from the moment the
-   question appears. pointer-events:none means clicks pass straight through,
-   so it can never be chosen. It starts invisible and fades in with a drift. */
+/* "No" first sits in its place beside "Yes". A beat later - or the moment a
+   cursor comes near - it tears loose and drifts for good. Once loose it is
+   pointer-events:none, so clicks pass straight through and it is never chosen. */
 .btn-no{
   color:var(--ink);background:var(--bg);border:1px solid var(--line-strong);padding:12px 34px;
-  touch-action:none;position:fixed;top:0;left:0;z-index:60;margin:0;
-  pointer-events:none;opacity:0;
-  transition:left 1.3s var(--ease), top 1.3s var(--ease), transform 1.3s var(--ease), opacity .7s var(--ease);
-}
-.btn-no.show{opacity:1}
-.btn-no.dodge{transition:left .3s var(--ease), top .3s var(--ease), transform .3s var(--ease), opacity .7s var(--ease)}
+  touch-action:none;transition:border-color .2s var(--ease)}
+.btn-no.loose{position:fixed;z-index:60;margin:0;pointer-events:none;
+  transition:left 1.3s var(--ease), top 1.3s var(--ease), transform 1.3s var(--ease)}
+.btn-no.loose.dodge{transition:left .3s var(--ease), top .3s var(--ease), transform .3s var(--ease)}
 
-/* the quiet aside under the (now single) option */
+/* the quiet aside - held back until "No" has actually run off */
 .oneopt{font-family:var(--serif);font-style:italic;font-weight:400;text-align:center;
   color:var(--ink-soft);font-size:.92rem;line-height:1.5;letter-spacing:.01em;
-  margin:14px auto 0;max-width:30ch}
+  margin:14px auto 0;max-width:30ch;
+  opacity:0;transform:translateY(8px);transition:opacity .6s var(--ease), transform .6s var(--ease)}
+.oneopt.show{opacity:1;transform:none}
 
 /* progress gauge - each tile a different colour from the wave, revealed as you go */
 .path{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;
@@ -163,14 +163,15 @@ body{
   100%{opacity:1;transform:scale(1)}
 }
 
-/* the question arrives, then the option, then the aside - in sequence */
+/* the question arrives, then the Yes / No in sequence. The .yesno fades
+   without a transform so that, once "No" goes position:fixed, it stays
+   anchored to the viewport rather than this box. The aside is held back. */
 #gate[data-reveal] .q{opacity:0;transform:translateY(16px);
   transition:opacity .6s var(--ease), transform .6s var(--ease)}
-#gate[data-reveal] .yesno{opacity:0;transform:translateY(16px);
-  transition:opacity .6s var(--ease) .22s, transform .6s var(--ease) .22s}
-#gate[data-reveal] .oneopt{opacity:0;transform:translateY(16px);
-  transition:opacity .6s var(--ease) .4s, transform .6s var(--ease) .4s}
-#gate[data-reveal].in .q,#gate[data-reveal].in .yesno,#gate[data-reveal].in .oneopt{opacity:1;transform:none}
+#gate[data-reveal] .yesno{opacity:0;
+  transition:opacity .6s var(--ease) .22s}
+#gate[data-reveal].in .q{opacity:1;transform:none}
+#gate[data-reveal].in .yesno{opacity:1}
 
 /* a quiet cue that there is more below the painting */
 .scrollcue{
@@ -199,8 +200,9 @@ body{
   .art[data-reveal]{opacity:1;transform:none;transition:none}
   .mosaic .t.on{opacity:1}
   .mosaic.in .t.on{animation:none}
-  #gate[data-reveal] .q,#gate[data-reveal] .yesno,#gate[data-reveal] .oneopt{opacity:1;transform:none;transition:none}
+  #gate[data-reveal] .q,#gate[data-reveal] .yesno{opacity:1;transform:none;transition:none}
   .btn-no{display:none}            /* no motion: drop the dodging option entirely */
+  .oneopt{opacity:1;transform:none;transition:none}   /* ...and keep the aside */
   .scrollcue svg{animation:none}
   .stepIn{animation:none}
 }
@@ -220,6 +222,7 @@ body{
     <h1 class="q">Want to come to our wedding?</h1>
     <div class="yesno">
       <button class="btn btn-yes" id="yes">Yes</button>
+      <button class="btn btn-no" id="no" tabindex="-1">No</button>
     </div>
     <p class="oneopt">(looks like you have only one option!)</p>
   </section>
@@ -242,9 +245,6 @@ body{
   </footer>
 
 </main>
-
-<!-- the option that keeps running away -->
-<button class="btn btn-no" id="no" aria-hidden="true" tabindex="-1">No</button>
 
 <div class="scrollcue" id="scrollcue" aria-hidden="true">
   <span>scroll</span>
@@ -320,15 +320,17 @@ body{
     el.appendChild(frag);
   })();
 
-  /* the "No" that drifts on its own - never clickable.
-     It is pointer-events:none, so clicks pass straight through it.
-     It wakes up the moment the question scrolls into view and then
-     keeps wandering forever, darting away faster if a cursor nears. */
+  /* the "No" sits in its place beside "Yes" when the question first appears,
+     then - a beat later, or the instant a cursor comes near - it tears loose
+     from the row and drifts for good. Once loose it is pointer-events:none,
+     so clicks pass straight through and it can never be chosen. */
   var no=document.getElementById("no"), yes=document.getElementById("yes"), gate=document.getElementById("gate");
+  var oneopt=document.querySelector(".oneopt");
   var noTimer=null;
-  function stopNo(){ if(noTimer){ clearInterval(noTimer); noTimer=null; } if(no) no.classList.remove("show"); }
+  function stopNo(){ if(noTimer){ clearInterval(noTimer); noTimer=null; } if(no) no.style.display="none"; }
   if(!reduce && no){
-    var started=false, lastMove=0;
+    var escaped=false, lastMove=0, armTimer=null;
+    /* send it to a fresh random spot, clear of the "Yes" button */
     function driftTo(fast){
       no.classList.toggle("dodge", !!fast);
       var vw=innerWidth, vh=innerHeight, bw=no.offsetWidth||80, bh=no.offsetHeight||46, pad=14;
@@ -339,28 +341,44 @@ body{
       no.style.transform="rotate("+(Math.random()*16-8).toFixed(1)+"deg)";
       lastMove=Date.now();
     }
-    function start(){
-      if(started) return; started=true;
-      no.classList.add("show");
-      driftTo(false);
-      noTimer=setInterval(function(){ driftTo(false); }, 2200);
+    /* tear it out of the row, from exactly where it sat, and set it loose */
+    function escape(){
+      if(escaped) return; escaped=true;
+      if(armTimer){ clearTimeout(armTimer); armTimer=null; }
+      var r=no.getBoundingClientRect();
+      no.classList.add("loose");
+      no.style.transition="none";
+      no.style.left=r.left+"px"; no.style.top=r.top+"px"; no.style.transform="none";
+      no.getBoundingClientRect();                 /* reflow so the above "sticks" */
+      requestAnimationFrame(function(){
+        no.style.transition="";                   /* restore the 1.3s glide */
+        if(oneopt) oneopt.classList.add("show");  /* now the quip is true */
+        driftTo(false);                           /* first flight */
+        noTimer=setInterval(function(){ driftTo(false); }, 2200);
+      });
     }
-    /* begin as soon as the invitation question comes into view */
+    /* arm the escape once the question is in view: a short beat, or sooner
+       if a cursor/finger comes close to "No" */
+    function arm(){ if(!escaped && !armTimer) armTimer=setTimeout(escape, 1500); }
     if("IntersectionObserver" in window){
       var go=new IntersectionObserver(function(es){
-        es.forEach(function(e){ if(e.isIntersecting){ start(); go.disconnect(); } });
-      },{threshold:0.3});
+        es.forEach(function(e){ if(e.isIntersecting){ arm(); go.disconnect(); } });
+      },{threshold:0.4});
       go.observe(gate);
-    }else{ start(); }
-    /* dart away if a cursor or finger comes close */
-    function dodge(px,py){
-      if(!started || Date.now()-lastMove<260) return;   /* don't thrash mid-glide */
+    }else{ arm(); }
+    /* proximity: trigger the escape, then keep darting away */
+    function near(px,py){
       var r=no.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
-      if(Math.hypot(px-cx,py-cy)<96) driftTo(true);
+      if(Math.hypot(px-cx,py-cy)>=96) return;
+      if(!escaped){ escape(); }
+      else if(Date.now()-lastMove>260){ driftTo(true); }
     }
-    document.addEventListener("mousemove",function(e){ dodge(e.clientX,e.clientY); });
-    document.addEventListener("touchmove",function(e){ var t=e.touches[0]; if(t) dodge(t.clientX,t.clientY); },{passive:true});
-    addEventListener("resize",function(){ if(started) driftTo(false); });
+    document.addEventListener("mousemove",function(e){ near(e.clientX,e.clientY); });
+    document.addEventListener("touchmove",function(e){ var t=e.touches[0]; if(t) near(t.clientX,t.clientY); },{passive:true});
+    /* any direct attempt to touch it sends it off at once (esp. on touch) */
+    no.addEventListener("pointerenter",escape);
+    no.addEventListener("pointerdown",function(e){ e.preventDefault(); escape(); });
+    addEventListener("resize",function(){ if(escaped) driftTo(false); });
   }
 
   /* the quiz */
